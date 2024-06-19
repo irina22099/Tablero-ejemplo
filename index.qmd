@@ -1,0 +1,101 @@
+---
+title: "Tablero de ejemplo"
+format: 
+  dashboard:
+    orientation: columns
+---
+
+```{r}
+#| label: carga-paquetes
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(sf)
+library(DT)
+library(plotly)
+library(leaflet)
+library(leaflet.extras)
+library(leafem)
+```
+
+```{r}
+#| label: carga-datos
+
+felidos <-
+  st_read(
+    "felidos.csv",
+    options = c(
+     "X_POSSIBLE_NAMES=decimalLongitude", 
+      "Y_POSSIBLE_NAMES=decimalLatitude"),
+    quiet = TRUE
+    )
+st_crs(felidos) <- 4326
+```
+
+## Colum {width=50%}
+```{r}
+#| label: mapa
+#| title: "Mapa de distribución"
+
+leaflet()|>
+  setView(
+    lng = -84,
+    lat = 10,
+    zoom = 7
+  ) |>
+  addTiles(group ="OSM")|>
+  addProviderTiles(provider = providers$Esri.WorldImagery, group = "Imagenes satelitales") |>
+  addCircleMarkers(
+    data = felidos,
+    color = "black",
+    fillColor = "pink",
+    stroke = FALSE,
+    radius = 4,
+    fillOpacity = 1.0,
+    group = "Félidos"
+    ) |>
+  addLayersControl(
+    baseGroups = c("OSM", "Imagenes satelitales"),
+    overlayGroups = c("Félidos")
+  ) |>
+  addResetMapButton() |>
+  addSearchOSM() |>
+  addMouseCoordinates() |>
+  addMiniMap(position = "bottomright") |>
+  addFullscreenControl()
+  
+```
+
+## Colum {width=50%}
+```{r}
+#| label: tabla
+#| title: "Lista de registros de presencia"
+felidos |>
+  select(species, decimalLongitude, decimalLatitude, stateProvince) |>
+  datatable()
+```
+
+```{r}
+#| label: grafico
+#| title: "Cantidad de registros por provincia"
+
+grafico_ggplot2 <-
+felidos |>
+  st_drop_geometry() |>
+  group_by(stateProvince) |>
+  filter(stateProvince == "San José" |
+           stateProvince == "Limon" |
+           stateProvince == "Guanacaste" |
+           stateProvince == "Alajuela" | 
+           stateProvince == "Heredia" |
+           stateProvince == "Cartago") |>
+  summarize(n = n()) |>
+  ggplot(aes(x = stateProvince, y = n)) +
+  geom_col()
+
+ggplotly(grafico_ggplot2) |> config(locale = "es")
+```
+
+
+
